@@ -43,19 +43,7 @@ class MMWorker:
 
     def getAuth(self):
         url = "https://maimai.cn/contact/visit_history?jsononly=1&limit=9"
-        script = '''
-        function test(){
-        var ret; 
-        $.ajaxSetup({async:false}); 
-        $.getJSON("''' + url + ''''", {
-
-            }, function (data) {
-                    ret=JSON.stringify(data);
-            });
-        return ret;}
-        return ( test());
-        '''
-        ret = self.driver.execute_script(script=script)
+        ret = self._get(url)
         self.auth = json.loads(ret)
         self.cookies = self.auth["auth_info"]
         self.cookies["uid"] = self.cookies["uid"].replace("\"", "").strip()
@@ -76,19 +64,7 @@ class MMWorker:
         baseUrl = "https://maimai.cn/sdk/web/feed_list?u={u}&channel=www&version=4.0.0&_csrf={_csrf}&access_token={access_token}&uid={uid}&token={token}&page={page}&hash=feed_explore&jsononly=1"
         url = baseUrl.format(page=page, uid=self.cookies["uid"], u=self.cookies["u"], token=self.cookies["token"],
                              _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
-        script = '''
-        function test(){
-        var ret; 
-        $.ajaxSetup({async:false}); 
-        $.getJSON("''' + url + ''''", {
-             
-            }, function (data) {
-                    ret=JSON.stringify(data);
-            });
-        return ret;}
-        return ( test());
-        '''
-        return self.driver.execute_script(script=script)
+        return self._get(url)
 
     def Login(self):
         self.driver.get("https://acc.maimai.cn/login")
@@ -136,19 +112,7 @@ class MMWorker:
     def getHotComment(self, feed):
         baseUrl = "https://maimai.cn/sdk/web/feed/getcmts?fid={fid}&page=1&count=20&u=-1&channel=&version=0.0.0&_csrf={_csrf}&access_token={access_token}&uid=&token="
         url = baseUrl.format(fid=feed["id"], _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
-        script = '''
-        function test(){
-        var ret; 
-        $.ajaxSetup({async:false}); 
-        $.getJSON("''' + url + '''", {
-
-            }, function (data) {
-                    ret=JSON.stringify(data);
-            });
-        return ret;}
-        return ( test());
-        '''
-        return self.driver.execute_script(script=script)
+        return self._get(url)
 
     def postComment(self, feed, resp):
         baseUrl = 'https://open.taou.com/maimai/feed/v3/addcmt?fr=&u={u}&channel=www&version=4.0.0&_csrf={_csrf}&access_token={access_token}&uid="{uid}"&token="{token}"'
@@ -178,13 +142,37 @@ class MMWorker:
         '''
         return self.driver.execute_script(script=script)
 
+    def like(self, u):
+        baseUrl = "https://open.taou.com/maimai/feed/v3/like?fid={fid}&like=1&fr=&u={u}&channel=www&version=4.0.0&_csrf={_csrf}&access_token={access_token}&uid={uid}&token={token}"
+        url = baseUrl.format(fid=u["id"], u=self.cookies["u"], uid=self.cookies["uid"], token=self.cookies["token"],
+                             _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
+
+        rp = self._get(url)
+        print("url:https://maimai.cn/web/feed_detail?fid={},like:{},ret:{}".format(u["id"], 1, rp))
+
+    def _get(self, url):
+        script = '''
+                function test(){
+                var ret; 
+                $.ajaxSetup({async:false}); 
+                $.getJSON("''' + url + '''", {
+
+                    }, function (data) {
+                            ret=JSON.stringify(data);
+                    });
+                return ret;}
+                return ( test());
+                '''
+        return self.driver.execute_script(script=script)
+
 
 def start():
     w = MMWorker()
     if w.run():
         while True:
             for u in w.popUsers():
-                w.comment(u)
+                func = random.choice([w.comment, w.like])
+                func(u)
                 time.sleep(2)
             time.sleep(10)
 
