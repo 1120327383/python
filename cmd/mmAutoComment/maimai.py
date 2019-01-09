@@ -1,8 +1,19 @@
 import json
+import random
+
 from selenium import webdriver
 import time
 from pyvirtualdisplay import Display
 import os
+
+cmts = [
+    u'支持下',
+    u'感谢分享',
+    u'哈哈',
+    u'好',
+    u'太棒了'
+]
+
 
 class MMWorker:
     def __init__(self):
@@ -47,8 +58,8 @@ class MMWorker:
         ret = self.driver.execute_script(script=script)
         self.auth = json.loads(ret)
         self.cookies = self.auth["auth_info"]
-        self.cookies["uid"]=self.cookies["uid"].replace("\"","").strip()
-        self.cookies["token"]=self.cookies["token"].replace("\"","").strip()
+        self.cookies["uid"] = self.cookies["uid"].replace("\"", "").strip()
+        self.cookies["token"] = self.cookies["token"].replace("\"", "").strip()
 
     def loadJquery(self):
         script = '''
@@ -63,7 +74,8 @@ class MMWorker:
 
     def getUsers(self, page):
         baseUrl = "https://maimai.cn/sdk/web/feed_list?u={u}&channel=www&version=4.0.0&_csrf={_csrf}&access_token={access_token}&uid={uid}&token={token}&page={page}&hash=feed_explore&jsononly=1"
-        url = baseUrl.format(page=page, uid=self.cookies["uid"],u=self.cookies["u"], token=self.cookies["token"],_csrf=self.cookies["_csrf"],access_token=self.cookies["access_token"])
+        url = baseUrl.format(page=page, uid=self.cookies["uid"], u=self.cookies["u"], token=self.cookies["token"],
+                             _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
         script = '''
         function test(){
         var ret; 
@@ -109,17 +121,21 @@ class MMWorker:
 
     def comment(self, feed):
         ret = self.getHotComment(feed)
-        data = json.loads(ret)
-        if len(data["comments"]["hot_comments"]) < 1:
-            resp = u"支持下"
-        else:
-            resp = data["comments"]["hot_comments"][0]["t"]
+        try:
+            data = json.loads(ret)
+            if len(data["comments"]["hot_comments"]) < 1:
+                resp = random.choice(cmts)
+            else:
+                resp = data["comments"]["hot_comments"][0]["t"]
+        except:
+            resp = random.choice(cmts)
+
         rp = self.postComment(feed, resp)
         print("url:https://maimai.cn/web/feed_detail?fid={},post:{},ret:{}".format(feed["id"], resp, rp))
 
     def getHotComment(self, feed):
         baseUrl = "https://maimai.cn/sdk/web/feed/getcmts?fid={fid}&page=1&count=20&u=-1&channel=&version=0.0.0&_csrf={_csrf}&access_token={access_token}&uid=&token="
-        url = baseUrl.format(fid=feed["id"],_csrf=self.cookies["_csrf"],access_token=self.cookies["access_token"])
+        url = baseUrl.format(fid=feed["id"], _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
         script = '''
         function test(){
         var ret; 
@@ -136,7 +152,8 @@ class MMWorker:
 
     def postComment(self, feed, resp):
         baseUrl = 'https://open.taou.com/maimai/feed/v3/addcmt?fr=&u={u}&channel=www&version=4.0.0&_csrf={_csrf}&access_token={access_token}&uid="{uid}"&token="{token}"'
-        url = baseUrl.format(u=self.cookies["u"],uid=self.cookies["uid"], token=self.cookies["token"],_csrf=self.cookies["_csrf"],access_token=self.cookies["access_token"])
+        url = baseUrl.format(u=self.cookies["u"], uid=self.cookies["uid"], token=self.cookies["token"],
+                             _csrf=self.cookies["_csrf"], access_token=self.cookies["access_token"])
         data = json.dumps({
             "fid": "{}".format(feed["id"]),
             "u2": "{}".format(self.cookies["u"]),
